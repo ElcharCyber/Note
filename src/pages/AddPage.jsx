@@ -17,7 +17,25 @@ function AddPage() {
   }
 
   function onSubmitHandler() {
-    addNote({ title, body });
+    const trimmedTitle = title.trim();
+    const cleanBody = body.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+
+    if (!trimmedTitle && !cleanBody) {
+      alert('Kolom judul dan isi catatan tidak boleh kosong!');
+      return;
+    }
+
+    if (!trimmedTitle) {
+      alert('Kolom judul catatan tidak boleh kosong!');
+      return;
+    }
+
+    if (!cleanBody) {
+      alert('Kolom isi catatan tidak boleh kosong!');
+      return;
+    }
+
+    addNote({ title: trimmedTitle, body });
     navigate('/');
   }
 

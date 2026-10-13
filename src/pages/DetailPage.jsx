@@ -19,8 +19,11 @@ function DetailPage() {
   }, [id]);
 
   function onDeleteHandler() {
-    deleteNote(id);
-    navigate('/');
+    const isConfirmed = window.confirm('Apakah Anda yakin ingin menghapus catatan ini?');
+    if (isConfirmed) {
+      deleteNote(id);
+      navigate('/');
+    }
   }
 
   function onArchiveHandler() {
