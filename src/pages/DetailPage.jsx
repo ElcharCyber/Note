@@ -1,51 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import parser from 'html-react-parser';
 import { FiTrash2 } from 'react-icons/fi';
 import { MdOutlineArchive, MdOutlineUnarchive } from 'react-icons/md';
-import { getNote, deleteNote, archiveNote, unarchiveNote } from '../utils/local-data';
+import LoadingIndicator from '../components/LoadingIndicator';
+import { getNote, deleteNote, archiveNote, unarchiveNote } from '../utils/network-data';
 import { showFormattedDate } from '../utils';
+import LocaleContext from '../contexts/LocaleContext';
+import localeContent from '../utils/localeContent';
 
 function DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [note, setNote] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { locale } = useContext(LocaleContext);
+  const content = localeContent[locale];
 
   useEffect(() => {
-    const foundedNote = getNote(id);
-    setNote(foundedNote || null);
-    setLoading(false);
+    let isMounted = true;
+
+    async function fetchNoteDetail() {
+      setLoading(true);
+      const { error, data } = await getNote(id);
+      if (!error && isMounted) {
+        setNote(data);
+      }
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+
+    fetchNoteDetail();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  function onDeleteHandler() {
-    const isConfirmed = window.confirm('Apakah Anda yakin ingin menghapus catatan ini?');
+  async function onDeleteHandler() {
+    const isConfirmed = window.confirm(content.deleteConfirm);
     if (isConfirmed) {
-      deleteNote(id);
+      setLoading(true);
+      await deleteNote(id);
       navigate('/');
     }
   }
 
-  function onArchiveHandler() {
-    archiveNote(id);
+  async function onArchiveHandler() {
+    setLoading(true);
+    await archiveNote(id);
     navigate('/');
   }
 
-  function onUnarchiveHandler() {
-    unarchiveNote(id);
+  async function onUnarchiveHandler() {
+    setLoading(true);
+    await unarchiveNote(id);
     navigate('/');
   }
 
   if (loading) {
-    return null;
+    return <LoadingIndicator />;
   }
 
   if (!note) {
     return (
       <section className="not-found-page">
-        <h2>Catatan Tidak Ditemukan</h2>
-        <p>Catatan yang Anda cari tidak dapat ditemukan atau telah dihapus.</p>
-        <Link to="/">Kembali ke Catatan</Link>
+        <h2>{content.noteNotFoundTitle}</h2>
+        <p>{content.noteNotFoundDesc}</p>
+        <Link to="/">{content.backToHome}</Link>
       </section>
     );
   }
@@ -53,15 +76,16 @@ function DetailPage() {
   return (
     <section className="detail-page">
       <h3 className="detail-page__title">{note.title}</h3>
-      <p className="detail-page__createdAt">{showFormattedDate(note.createdAt)}</p>
+      <p className="detail-page__createdAt">{showFormattedDate(note.createdAt, locale)}</p>
       <div className="detail-page__body">{parser(note.body)}</div>
       <div className="detail-page__action">
         {note.archived ? (
           <button
             className="action"
             type="button"
-            title="Aktifkan"
+            title={content.unarchiveNote}
             onClick={onUnarchiveHandler}
+            aria-label={content.unarchiveNote}
           >
             <MdOutlineUnarchive />
           </button>
@@ -69,8 +93,9 @@ function DetailPage() {
           <button
             className="action"
             type="button"
-            title="Arsipkan"
+            title={content.archiveNote}
             onClick={onArchiveHandler}
+            aria-label={content.archiveNote}
           >
             <MdOutlineArchive />
           </button>
@@ -78,8 +103,9 @@ function DetailPage() {
         <button
           className="action"
           type="button"
-          title="Hapus"
+          title={content.deleteNote}
           onClick={onDeleteHandler}
+          aria-label={content.deleteNote}
         >
           <FiTrash2 />
         </button>
